@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- ===== META & CORE SETTINGS ===== -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Telegram WebApp</title>
+
+    <!-- ===== PRELOADS ===== -->
+    <link rel="preload" href="images/back.webp" as="image" />
+    <link rel="preload" href="images/alert.webp" as="image" />
+    <link rel="preload" href="images/popup.webp" as="image" />
+
+    <!-- ===== MAIN STYLES ===== -->
+    <style>
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)),
+          url("images/back.webp");
+        background-size: cover;
+        background-position: center;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        transition: opacity 0.4s ease;
+        opacity: 0;
+      }
+      body.loaded {
+        opacity: 1;
+      }
+
+      .container {
+        background: rgba(25, 25, 25, 0.95);
+        padding: 16px;
+        border-radius: 14px;
+        width: 270px;
+        height: 420px;
+        text-align: center;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.45s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .group-image {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 12px;
+        border-radius: 50%;
+        background-size: cover;
+        background-position: center;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .group-name {
+        font-size: 1.14em;
+        font-weight: 700;
+        margin-bottom: 8px;
+        min-height: 1.2em;
+      }
+      .group-name.loading {
+        background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+        background-size: 200% 100%;
+        color: transparent;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+        height: 1.2em;
+        display: inline-block;
+        width: 60%;
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      .thin-text {
+        font-size: 0.85em;
+        color: #b8b8b8;
+        margin: 8px 0 14px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 10px;
+        background-color: rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        margin: 10px 0 14px;
+        overflow: hidden;
+      }
+      .progress {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #00aaff, #0088cc);
+        border-radius: 8px;
+        transition: width 400ms ease;
+      }
+
+      .btn {
+        display: block;
+        width: 100%;
+        font-size: 15px;
+        padding: 10px;
+        margin: 8px 0;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        transition: transform 0.12s ease, background 0.25s ease;
+        position: relative;
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .btn-share {
+        background: #0088cc;
+        animation: gentlePulse 2s infinite ease-in-out;
+      }
+      .btn-share .counter {
+        position: absolute;
+        top: 6px;
+        right: 10px;
+        padding: 2px 7px;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .btn-alert {
+        background: #286e9f;
+      }
+      .btn .btn-icon {
+        width: 18px;
+        height: 18px;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      .small-muted {
+        display: block;
+        font-size: 0.75em;
+        color: #9f9b9b;
+        margin-top: 6px;
+      }
+
+      @keyframes gentlePulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.04);
+        }
+      }
+      @keyframes glowPulse {
+        0% {
+          box-shadow: 0 0 8px #00aaff;
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 18px #00aaff;
+          transform: scale(1.04);
+        }
+        100% {
+          box-shadow: 0 0 8px #00aaff;
+          transform: scale(1);
+        }
+      }
+      .btn-access-active {
+        animation: glowPulse 1.2s infinite ease-in-out;
+        background: #00aaff !important;
+      }
+
+      /* ===== MODAL STYLES (mobile-style bottom sheet everywhere) ===== */
+      .share-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(10, 10, 10, 0.72);
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        z-index: 999;
+        transition: opacity 240ms ease;
+      }
+      .share-modal.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* modal content — reduced size and slide behavior */
+      .modal-content {
+        background: #151515;
+        padding: 14px 12px 16px;
+        border-radius: 14px 14px 0 0;
+        width: 100%;
+        max-width: 360px; /* reduced size */
+        text-align: center;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+        transform: translateY(110%); /* off-screen */
+        transition: transform 280ms cubic-bezier(0.2, 0.9, 0.28, 1),
+          opacity 220ms ease;
+        opacity: 0;
+      }
+      .modal-content.modal-open {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .modal-content h3 {
+        margin-bottom: 10px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.02em;
+      }
+
+      /* platform grid: single row of four columns */
+      .platforms {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        justify-items: center;
+      }
+      .platform-btn {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.04);
+        border: none;
+        border-radius: 10px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 10px 6px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: background 0.15s ease, transform 0.12s ease;
+        box-shadow: 0 4px 8px -4px rgba(0, 0, 0, 0.2);
+      }
+      .platform-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-3px);
+      }
+      .platform-btn img {
+        width: 30px;
+        height: 30px;
+        margin-bottom: 6px;
+      }
+      #closeModalBtn {
+        margin-top: 12px;
+        width: 100%;
+        padding: 9px 0;
+        background: #2a2a2a;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      /* message box inside modal (platform-colored) */
+      #message-box {
+        display: none;
+        margin: 8px 0;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        padding: 8px 10px;
+        border-radius: 8px;
+      }
+      #message-box.visible {
+        display: block;
+      }
+
+      /* small status toast */
+      #shareStatusToast {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 84px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        display: none;
+        z-index: 1001;
+      }
+      #shareStatusToast.show {
+        display: block;
+        animation: fadeUp 260ms ease;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="group-image" id="groupImage"></div>
+      <div class="group-name loading" id="groupName">Loading...</div>
+      <div class="thin-text">
+        Share 3 times to unlock and click /start to receive a gift
+      </div>
+
+      <div class="progress-bar"><div class="progress" id="progress"></div></div>
+
+      <button class="btn btn-share" id="shareButton">
+        <img src="images/telegram.svg" class="btn-icon" /> Share
+        <span class="counter" id="shareCounter">0/3</span>
+      </button>
+
+      <button class="btn btn-alert" id="megaGifButton">
+        <img src="images/alert.webp" class="btn-icon" /> See Preview
+      </button>
+      <button class="btn btn-alert" id="accessButton">
+        <img src="images/popup.webp" class="btn-icon" id="accessIcon" /> Access
+      </button>
+
+      <span class="small-muted"
+        >Access button will be activated after 3 shares</span
+      >
+    </div>
+
+    <!-- ===== SHARE MODAL ===== -->
+    <div id="shareModal" class="share-modal hidden" aria-hidden="true">
+      <div
+        id="modalContent"
+        class="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Share options"
+      >
+        <h3>Share to unlock access</h3>
+
+        <!-- message box (used for "copied!" and instructional feedback) -->
+        <div id="message-box"></div>
+
+        <div class="platforms" role="menu">
+          <button class="platform-btn" data-platform="telegram" role="menuitem">
+            <img src="images/telegram.svg" alt="Telegram logo" />Telegram
+          </button>
+
+          <button class="platform-btn" data-platform="whatsapp" role="menuitem">
+            <img src="images/whatsapp.svg" alt="WhatsApp logo" />WhatsApp
+          </button>
+
+          <button class="platform-btn" data-platform="discord" role="menuitem">
+            <img src="images/discord.svg" alt="Discord logo" />Discord
+          </button>
+
+          <button class="platform-btn" data-platform="signal" role="menuitem">
+            <img src="images/signal.svg" alt="Signal logo" />Signal
+          </button>
+        </div>
+
+        <button id="closeModalBtn">Cancel</button>
+      </div>
+    </div>
+
+    <div id="shareStatusToast" aria-hidden="true"></div>
+
+    <script>
+      // === Preserve original environment setup ===
+      if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+        Telegram.WebApp.ready();
+      }
+
+      // === Globals (unchanged semantics) ===
+      const telegramLinks = [
+        "https://t.me/uzudhxbdjskdkxjsjdhxhshadbot",
+        "https://t.me/jdjdjxyzjskxyjdjdudjdbot",
+        "https://t.me/vvvvvvduzusuzidieubot",
+        "t.me/DebloqueMoiPourOFBOT?start=start",
+      ];
+
+      let shareCount = 0;
+      const maxShares = 3;
+      let selectedGroup = null;
+      let groupsData = [];
+      let currentIndex = -1;
+
+      const progressEl = document.getElementById("progress");
+      const shareCounterEl = document.getElementById("shareCounter");
+      const groupImageEl = document.getElementById("groupImage");
+      const groupNameEl = document.getElementById("groupName");
+      const shareButtonEl = document.getElementById("shareButton");
+      const megaGifButton = document.getElementById("megaGifButton");
+      const accessButton = document.getElementById("accessButton");
+      const accessIcon = document.getElementById("accessIcon");
+      const modal = document.getElementById("shareModal");
+      const modalContent = document.getElementById("modalContent");
+      const toast = document.getElementById("shareStatusToast");
+      const messageBox = document.getElementById("message-box");
+
+      // countdown timer handles to clear when modal closed
+      let countdownIntervalId = null;
+      let countdownTimeoutId = null;
+
+      document.addEventListener("DOMContentLoaded", () => {
+        document.body.classList.add("loaded");
+      });
+
+      // === Helper: small toast for short feedback ===
+      function showToast(msg, ms = 1400) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        toast.setAttribute("aria-hidden", "false");
+        setTimeout(() => {
+          toast.classList.remove("show");
+          toast.setAttribute("aria-hidden", "true");
+        }, ms);
+      }
+
+      // === copyContent fallback (execCommand) ===
+      function copyContent(content) {
+        try {
+          const textarea = document.createElement("textarea");
+          textarea.value = content;
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          textarea.setAttribute("aria-hidden", "true");
+          document.body.appendChild(textarea);
+          textarea.select();
+          // For iOS selection
+          textarea.setSelectionRange(0, textarea.value.length);
+          const ok = document.execCommand("copy");
+          document.body.removeChild(textarea);
+          return ok;
+        } catch (err) {
+          console.error("Copy failed:", err);
+          return false;
+        }
+      }
+
+      // === message box platform colors ===
+      const PLATFORM_COLORS = {
+        telegram: "linear-gradient(90deg,#22a2df,#1f88c9)",
+        whatsapp: "linear-gradient(90deg,#25D366,#18b35a)",
+        discord: "linear-gradient(90deg,#4752c4,#3b46a8)", // darker blue
+        signal: "linear-gradient(90deg,#3a76f0,#2b6be3)",
+        default: "linear-gradient(90deg,#2b6be3,#3a76f0)",
+        error: "linear-gradient(90deg,#ff5a5a,#ff3a3a)",
+      };
+
+      // show a platform-colored message box for a duration (ms). optional callback after hide.
+      function showPlatformMessage(
+        text,
+        platform = "default",
+        duration = 3000,
+        cb
+      ) {
+        messageBox.textContent = text;
+        messageBox.style.background =
+          PLATFORM_COLORS[platform] || PLATFORM_COLORS.default;
+        messageBox.style.color = "#fff";
+        messageBox.className = "visible";
+        // auto-hide after duration
+        const tid = setTimeout(() => {
+          messageBox.className = "";
+          messageBox.textContent = "";
+          messageBox.style.background = "";
+          if (typeof cb === "function") cb();
+        }, duration);
+        // allow external clearing by returning the timeout id
+        return tid;
+      }
+
+      // specialized countdown message (updates innerHTML with two lines)
+      function showPlatformCountdown(baseText, platform, seconds, cb) {
+        clearCountdownTimers();
+
+        let remaining = seconds;
+        function updateBox() {
+          // two-line message: instruction + countdown
+          messageBox.innerHTML =
+            `<div style="font-weight:700;margin-bottom:6px;">${baseText}</div>` +
+            `<div style="font-size:13px;opacity:0.95">Opening in ${remaining}…</div>`;
+        }
+
+        messageBox.style.background =
+          PLATFORM_COLORS[platform] || PLATFORM_COLORS.default;
+        messageBox.style.color = "#fff";
+        messageBox.className = "visible";
+        updateBox();
+
+        countdownIntervalId = setInterval(() => {
+          remaining -= 1;
+          if (remaining >= 1) {
+            updateBox();
+          }
+        }, 1000);
+
+        countdownTimeoutId = setTimeout(() => {
+          // cleanup interval
+          clearCountdownTimers();
+          // hide box then call cb
+          messageBox.className = "";
+          messageBox.innerHTML = "";
+          messageBox.style.background = "";
+          if (typeof cb === "function") cb();
+        }, seconds * 1000);
+      }
+
+      function clearCountdownTimers() {
+        if (countdownIntervalId) {
+          clearInterval(countdownIntervalId);
+          countdownIntervalId = null;
+        }
+        if (countdownTimeoutId) {
+          clearTimeout(countdownTimeoutId);
+          countdownTimeoutId = null;
+        }
+      }
+
+      // === Helper: defensive open that prefers Telegram WebApp methods when available ===
+      function openLinkTelegramAware(url) {
+        try {
+          if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+            if (typeof Telegram.WebApp.openTelegramLink === "function") {
+              Telegram.WebApp.openTelegramLink(url);
+              return;
+            }
+            if (typeof Telegram.WebApp.openLink === "function") {
+              Telegram.WebApp.openLink(url);
+              return;
+            }
+          }
+          window.open(url, "_blank");
+        } catch (e) {
+          try {
+            window.open(url, "_blank");
+          } catch {}
+        }
+      }
+
+      // === Pick new random index different from current ===
+      function pickDifferentRandomIndex(len, current) {
+        if (len <= 1) return 0;
+        let idx;
+        do {
+          idx = Math.floor(Math.random() * len);
+        } while (idx === current);
+        return idx;
+      }
+
+      // === Load data.json (keeps same logic) ===
+      async function loadGroupData() {
+        try {
+          const resp = await fetch("data.json", { cache: "no-store" });
+          const data = await resp.json();
+          groupsData = data.groups || [];
+          if (!Array.isArray(groupsData) || !groupsData.length) {
+            groupNameEl.textContent = "No groups available";
+            groupNameEl.classList.remove("loading");
+            return;
+          }
+          currentIndex = Math.floor(Math.random() * groupsData.length);
+          selectedGroup = groupsData[currentIndex];
+          updateUIWithGroup(selectedGroup);
+        } catch (err) {
+          groupNameEl.textContent = "Failed to load groups";
+          groupNameEl.classList.remove("loading");
+        }
+      }
+
+      // === Update UI (keeps original behavior) ===
+      function updateUIWithGroup(group) {
+        groupImageEl.style.backgroundImage = `url('${group.image}')`;
+        groupNameEl.textContent = group.name || "Unnamed group";
+        groupNameEl.classList.remove("loading");
+        shareCount = 0;
+        updateShareCounterVisuals();
+        deactivateAccessButton();
+        megaGifButton.onclick = () => openExternalLink(group.previewLink);
+        accessButton.onclick = () => openExternalLink(group.accessLink);
+      }
+
+      function updateShareCounterVisuals() {
+        const pct = Math.round((shareCount / maxShares) * 100);
+        progressEl.style.width = pct + "%";
+        shareCounterEl.textContent = `${shareCount}/${maxShares}`;
+      }
+
+      // === SHARE: primary behavior is to open custom modal (existing trigger kept) ===
+      function shareLink() {
+        if (!selectedGroup) return;
+        showPlatformModal();
+      }
+
+      // === Modal open/close with translateY animation ===
+      function showPlatformModal() {
+        // reset message box & timers
+        clearCountdownTimers();
+        messageBox.className = "";
+        messageBox.textContent = "";
+        messageBox.style.background = "";
+        modal.classList.remove("hidden");
+        modal.setAttribute("aria-hidden", "false");
+        // trigger CSS translateY in next paint
+        requestAnimationFrame(() => {
+          modalContent.classList.add("modal-open");
+        });
+      }
+      function hidePlatformModal() {
+        // clear any running countdowns
+        clearCountdownTimers();
+        // slide down first, then hide overlay after transition
+        modalContent.classList.remove("modal-open");
+        // wait for transition to finish before hiding overlay
+        setTimeout(() => {
+          modal.classList.add("hidden");
+          modal.setAttribute("aria-hidden", "true");
+          // also ensure message box cleared
+          messageBox.className = "";
+          messageBox.textContent = "";
+          messageBox.style.background = "";
+        }, 300);
+      }
+      document
+        .getElementById("closeModalBtn")
+        .addEventListener("click", hidePlatformModal);
+
+      // === Platform-specific helpers (Telegram, WhatsApp, Discord, Signal) ===
+
+      function doShareTelegram(group) {
+        const encodedURL = encodeURIComponent(group.url);
+        const encodedText = encodeURIComponent(`${group.name}\n${group.url}`);
+        const tgShare = `https://t.me/share/url?url=${encodedURL}&text=${encodedText}`;
+        try {
+          if (
+            typeof Telegram !== "undefined" &&
+            Telegram.WebApp &&
+            typeof Telegram.WebApp.openTelegramLink === "function"
+          ) {
+            Telegram.WebApp.openTelegramLink(tgShare);
+          } else {
+            openLinkTelegramAware(tgShare);
+          }
+        } catch {
+          openLinkTelegramAware(tgShare);
+        }
+        // small feedback and close modal
+        showPlatformMessage("Opening Telegram share...", "telegram", 1000);
+      }
+
+      function doShareWhatsApp(group) {
+        const encoded = encodeURIComponent(`${group.name}\n${group.url}`);
+        const wa = `https://api.whatsapp.com/send?text=${encoded}`;
+        openLinkTelegramAware(wa);
+        showPlatformMessage("Opening WhatsApp share...", "whatsapp", 1000);
+      }
+
+      // Discord: show instructional message with countdown (3s), then open Discord and count.
+      function doShareDiscord(group) {
+        const content = `${group.name}\n${group.url}`;
+        const targetUrl = "https://discord.com/app";
+
+        // If we've already reached max shares, open immediately, count and close modal.
+        if (shareCount >= maxShares) {
+          openLinkTelegramAware(targetUrl);
+          handleShareSuccess();
+          hidePlatformModal();
+          return;
+        }
+
+        const instruction =
+          "Instant access is activated as soon as you share the link in a group.";
+        // show countdown for 3 seconds, then open and count
+        showPlatformCountdown(instruction, "discord", 4, () => {
+          openLinkTelegramAware(targetUrl);
+          handleShareSuccess();
+          hidePlatformModal();
+        });
+      }
+
+      // Signal: copy (best-effort) + show instructional countdown (3s), then open Signal web-share and count.
+      function doShareSignal(group) {
+        const contentToShare = `${group.name}\n${group.url}`;
+        const targetUrl = `https://signal.me/share/text?text=${encodeURIComponent(
+          contentToShare
+        )}`;
+        // try copy, not critical to UX, but keep best-effort
+        copyContent(contentToShare);
+
+        // If we've already reached max shares, open immediately, count and close modal.
+        if (shareCount >= maxShares) {
+          openLinkTelegramAware(targetUrl);
+          handleShareSuccess();
+          hidePlatformModal();
+          return;
+        }
+
+        const instruction =
+          "Instant access is activated as soon as you share the link in a group.";
+        showPlatformCountdown(instruction, "signal", 4, () => {
+          openLinkTelegramAware(targetUrl);
+          handleShareSuccess();
+          hidePlatformModal();
+        });
+      }
+
+      // === Core mapping: platform button -> action ===
+      document.querySelector(".platforms").addEventListener("click", (e) => {
+        const btn = e.target.closest(".platform-btn");
+        if (!btn) return;
+        const platform = btn.dataset.platform;
+        if (!selectedGroup) return;
+
+        switch (platform) {
+          case "telegram":
+            doShareTelegram(selectedGroup);
+            hidePlatformModal();
+            handleShareSuccess();
+            break;
+
+          case "whatsapp":
+            doShareWhatsApp(selectedGroup);
+            hidePlatformModal();
+            handleShareSuccess();
+            break;
+
+          case "discord":
+            // show message -> open after 3s -> increment & hide happen inside the function
+            doShareDiscord(selectedGroup);
+            // DO NOT hide modal here
+            break;
+
+          case "signal":
+            doShareSignal(selectedGroup);
+            // DO NOT hide modal here
+            break;
+
+          default:
+            hidePlatformModal();
+            openLinkTelegramAware(
+              selectedGroup.previewLink ||
+                selectedGroup.accessLink ||
+                selectedGroup.url
+            );
+            handleShareSuccess();
+            break;
+        }
+      });
+
+      // === handle share counting & rotation ===
+      function handleShareSuccess() {
+        if (shareCount < maxShares) {
+          shareCount++;
+          updateShareCounterVisuals();
+          if (shareCount >= maxShares) activateAccessButton();
+        } else {
+          // rotate to next random group
+          const nextIdx = pickDifferentRandomIndex(
+            groupsData.length,
+            currentIndex
+          );
+          currentIndex = nextIdx;
+          selectedGroup = groupsData[currentIndex];
+          updateUIWithGroup(selectedGroup);
+        }
+      }
+
+      function activateAccessButton() {
+        accessButton.classList.add("btn-access-active");
+        accessIcon.src = "images/alert.webp";
+      }
+      function deactivateAccessButton() {
+        accessButton.classList.remove("btn-access-active");
+        accessIcon.src = "images/popup.webp";
+      }
+
+      // Reusable external open (used elsewhere)
+      function openExternalLink(url) {
+        try {
+          if (
+            typeof Telegram !== "undefined" &&
+            Telegram.WebApp &&
+            typeof Telegram.WebApp.openLink === "function"
+          ) {
+            Telegram.WebApp.openLink(url);
+          } else {
+            window.open(url, "_blank");
+          }
+        } catch {
+          try {
+            window.open(url, "_blank");
+          } catch {}
+        }
+      }
+
+      // event bindings
+      shareButtonEl.addEventListener("click", shareLink);
+
+      // initial load
+      loadGroupData();
+    </script>
+  </body>
+</html>
