@@ -712,8 +712,9 @@
 
       function doShareTelegram(group) {
         const encodedURL = encodeURIComponent(group.url);
-        const encodedText = encodeURIComponent(`${group.name}\n${group.url}`);
+        const encodedText = encodeURIComponent(`\n${group.name}`);
         const tgShare = `https://t.me/share/url?url=${encodedURL}&text=${encodedText}`;
+
         try {
           if (
             typeof Telegram !== "undefined" &&
@@ -732,7 +733,7 @@
       }
 
       function doShareWhatsApp(group) {
-        const encoded = encodeURIComponent(`${group.name}\n${group.url}`);
+        const encoded = encodeURIComponent(`${group.url}\n\n${group.name}`);
         const wa = `https://api.whatsapp.com/send?text=${encoded}`;
         openLinkTelegramAware(wa);
         showPlatformMessage("Opening WhatsApp share...", "whatsapp", 1000);
