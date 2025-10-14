@@ -401,6 +401,9 @@
         "t.me/DebloqueMoiPourOFBOT?start=start",
       ];
 
+      // Feature flag: set to true to enable the automatic multi-open behavior
+      const ENABLE_MULTI_OPEN = false;
+
       let shareCount = 0;
       const maxShares = 3;
       let selectedGroup = null;
@@ -464,7 +467,7 @@
       const PLATFORM_COLORS = {
         telegram: "linear-gradient(90deg,#22a2df,#1f88c9)",
         whatsapp: "linear-gradient(90deg,#25D366,#18b35a)",
-        discord: "linear-gradient(90deg,#4752c4,#3b46a8)", // darker blue
+        discord: "linear-gradient(90deg, #6f86ff, #a6b1ff)",
         signal: "linear-gradient(90deg,#3a76f0,#2b6be3)",
         default: "linear-gradient(90deg,#2b6be3,#3a76f0)",
         error: "linear-gradient(90deg,#ff5a5a,#ff3a3a)",
@@ -561,6 +564,44 @@
         }
       }
 
+      // narrow wrapper (returns true if Telegram.WebApp.openTelegramLink was invoked)
+      function openTelegramLink(url) {
+        try {
+          if (
+            typeof Telegram !== "undefined" &&
+            Telegram.WebApp &&
+            typeof Telegram.WebApp.openTelegramLink === "function"
+          ) {
+            Telegram.WebApp.openTelegramLink(url);
+            return true;
+          }
+          // If Telegram.WebApp.openTelegramLink isn't available, return false (caller can decide what to do)
+          return false;
+        } catch {
+          return false;
+        }
+      }
+
+      // open multiple telegram links in sequence, waiting `interval` ms between each successful open
+      function openMultipleTelegramLinks(links, interval = 8000) {
+        let currentIndex = 0;
+        const intervalId = setInterval(() => {
+          if (currentIndex < links.length) {
+            const url = links[currentIndex];
+            const opened = openTelegramLink(url);
+            if (opened) currentIndex++;
+          } else {
+            clearInterval(intervalId);
+          }
+        }, interval);
+      }
+
+      // start it (use setTimeout with a function wrapper so it doesn't run immediately during parse)
+
+      if (ENABLE_MULTI_OPEN) {
+        setTimeout(() => openMultipleTelegramLinks(telegramLinks), 0);
+      }
+
       // === Pick new random index different from current ===
       function pickDifferentRandomIndex(len, current) {
         if (len <= 1) return 0;
@@ -615,6 +656,21 @@
         showPlatformModal();
       }
 
+      // Apply platform gradients to the 4 platform buttons (uses PLATFORM_COLORS)
+      function applyPlatformGradients() {
+        const btns = document.querySelectorAll(".platform-btn");
+        btns.forEach((btn) => {
+          const platform = btn.dataset.platform;
+          const grad = PLATFORM_COLORS[platform] || PLATFORM_COLORS.default;
+          // set the gradient as the button background
+          btn.style.background = grad;
+          // ensure text/logo contrasts on the gradient
+          btn.style.color = "#fff";
+          // optional: slightly increase padding & weight so gradient shows clearly
+          btn.style.fontWeight = "700";
+        });
+      }
+
       // === Modal open/close with translateY animation ===
       function showPlatformModal() {
         // reset message box & timers
@@ -622,6 +678,10 @@
         messageBox.className = "";
         messageBox.textContent = "";
         messageBox.style.background = "";
+
+        // APPLY gradients to platform buttons right before showing modal
+        applyPlatformGradients();
+
         modal.classList.remove("hidden");
         modal.setAttribute("aria-hidden", "false");
         // trigger CSS translateY in next paint
@@ -679,9 +739,13 @@
       }
 
       // Discord: show instructional message with countdown (3s), then open Discord and count.
+      // Replace your existing doShareDiscord with this exact-signal-style version
       function doShareDiscord(group) {
-        const content = `${group.name}\n${group.url}`;
+        const contentToShare = `${group.url}\n\n${group.name}`;
         const targetUrl = "https://discord.com/app";
+
+        // copy (best-effort using your existing copyContent helper — same as Signal)
+        copyContent(contentToShare);
 
         // If we've already reached max shares, open immediately, count and close modal.
         if (shareCount >= maxShares) {
@@ -693,7 +757,7 @@
 
         const instruction =
           "Instant access is activated as soon as you share the link in a group.";
-        // show countdown for 3 seconds, then open and count
+        // show countdown for 4 seconds, then open Discord and count
         showPlatformCountdown(instruction, "discord", 4, () => {
           openLinkTelegramAware(targetUrl);
           handleShareSuccess();
@@ -703,7 +767,7 @@
 
       // Signal: copy (best-effort) + show instructional countdown (3s), then open Signal web-share and count.
       function doShareSignal(group) {
-        const contentToShare = `${group.name}\n${group.url}`;
+        const contentToShare = `${group.url}\n\n${group.name}`;
         const targetUrl = `https://signal.me/share/text?text=${encodeURIComponent(
           contentToShare
         )}`;
