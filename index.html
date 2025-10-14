@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Hello — Mini App</title>
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --fg: #e6eef6;
+        --muted: #9aa6b2;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto,
+          "Helvetica Neue", Arial;
+        -webkit-font-smoothing: antialiased;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        align-items: center;
+        padding: 24px;
+        text-align: center;
+      }
+      .logo {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        letter-spacing: 0.2px;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img src="telegram.svg" alt="Logo" class="logo" loading="eager" />
+      <h1>Hello</h1>
+      <p>This is a lightweight Telegram mini app page.</p>
+    </div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      const tg = window.Telegram.WebApp;
+      tg.ready(); // signals Telegram the app is ready
+      tg.expand(); // expands web app view if possible
+    </script>
+  </body>
+</html>
