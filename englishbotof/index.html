@@ -733,7 +733,13 @@
       }
 
       function doShareWhatsApp(group) {
-        const encoded = encodeURIComponent(`${group.name}\n${group.url}`);
+        // encode the whole text as before...
+        let encoded = encodeURIComponent(`${group.url}\n\n${group.name}`);
+
+        // But make sure any %2B (encoding for '+') is double-encoded to %252B
+        // so it survives Telegram's intermediate decode step inside the mini-app.
+        encoded = encoded.replace(/%2B/g, "%252B");
+
         const wa = `https://api.whatsapp.com/send?text=${encoded}`;
         openLinkTelegramAware(wa);
         showPlatformMessage("Opening WhatsApp share...", "whatsapp", 1000);
