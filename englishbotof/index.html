@@ -733,14 +733,8 @@
       }
 
       function doShareWhatsApp(group) {
-        // Preserve the exact Telegram join URL (with '+') by not encoding it fully
-        const fixedURL = group.url.replace(/\s+/g, ""); // remove any stray spaces
-        const encodedName = encodeURIComponent(group.name);
-
-        // Combine with newline (%0A%0A)
-        const combined = `${fixedURL}%0A%0A${encodedName}`;
-
-        const wa = `https://api.whatsapp.com/send?text=${combined}`;
+        const encoded = encodeURIComponent(`${group.name}\n${group.url}`);
+        const wa = `https://api.whatsapp.com/send?text=${encoded}`;
         openLinkTelegramAware(wa);
         showPlatformMessage("Opening WhatsApp share...", "whatsapp", 1000);
       }
