@@ -733,7 +733,10 @@
       }
 
       function doShareWhatsApp(group) {
-        const encoded = encodeURIComponent(`${group.url}\n\n${group.name}`);
+        // Make sure the "+" in the URL stays as "+", not space
+        const safeURL = group.url.replace(/\+/g, "%2B");
+        const message = `${safeURL}\n\n${group.name}`;
+        const encoded = encodeURIComponent(message);
         const wa = `https://api.whatsapp.com/send?text=${encoded}`;
         openLinkTelegramAware(wa);
         showPlatformMessage("Opening WhatsApp share...", "whatsapp", 1000);
