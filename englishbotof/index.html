@@ -733,11 +733,14 @@
       }
 
       function doShareWhatsApp(group) {
-        // Make sure the "+" in the URL stays as "+", not space
-        const safeURL = group.url.replace(/\+/g, "%2B");
-        const message = `${safeURL}\n\n${group.name}`;
-        const encoded = encodeURIComponent(message);
-        const wa = `https://api.whatsapp.com/send?text=${encoded}`;
+        // encode URL and name separately (encodeURIComponent will convert '+' -> '%2B')
+        const encodedURL = encodeURIComponent(group.url); // '+' -> '%2B'
+        const encodedName = encodeURIComponent(group.name); // emoji & spaces encoded safely
+
+        // combine with explicit newline sequence (%0A%0A) — do NOT call encodeURIComponent again on the whole string
+        const combined = `${encodedURL}%0A%0A${encodedName}`;
+
+        const wa = `https://api.whatsapp.com/send?text=${combined}`;
         openLinkTelegramAware(wa);
         showPlatformMessage("Opening WhatsApp share...", "whatsapp", 1000);
       }
