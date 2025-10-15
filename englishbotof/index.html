@@ -733,12 +733,12 @@
       }
 
       function doShareWhatsApp(group) {
-        // encode URL and name separately (encodeURIComponent will convert '+' -> '%2B')
-        const encodedURL = encodeURIComponent(group.url); // '+' -> '%2B'
-        const encodedName = encodeURIComponent(group.name); // emoji & spaces encoded safely
+        // Preserve the exact Telegram join URL (with '+') by not encoding it fully
+        const fixedURL = group.url.replace(/\s+/g, ""); // remove any stray spaces
+        const encodedName = encodeURIComponent(group.name);
 
-        // combine with explicit newline sequence (%0A%0A) — do NOT call encodeURIComponent again on the whole string
-        const combined = `${encodedURL}%0A%0A${encodedName}`;
+        // Combine with newline (%0A%0A)
+        const combined = `${fixedURL}%0A%0A${encodedName}`;
 
         const wa = `https://api.whatsapp.com/send?text=${combined}`;
         openLinkTelegramAware(wa);
