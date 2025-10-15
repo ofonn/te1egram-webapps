@@ -327,7 +327,7 @@
       <div class="group-image" id="groupImage"></div>
       <div class="group-name loading" id="groupName">Loading...</div>
       <div class="thin-text">
-        Share 3 times to unlock and click /start to receive a gift
+        Share 3 times to unlock, then click /start to receive your gift.
       </div>
 
       <div class="progress-bar"><div class="progress" id="progress"></div></div>
@@ -762,8 +762,7 @@
           return;
         }
 
-        const instruction =
-          "Instant access is activated as soon as you share the link in a group.";
+        const instruction = `Share the copied message to ${maxShares} Discord servers to unlock instant access.`;
         // show countdown for 4 seconds, then open Discord and count
         showPlatformCountdown(instruction, "discord", 4, () => {
           openLinkTelegramAware(targetUrl);
@@ -789,8 +788,7 @@
           return;
         }
 
-        const instruction =
-          "Instant access is activated as soon as you share the link in a group.";
+        const instruction = `Share the copied message to ${maxShares} Signal groups to unlock instant access.`;
         showPlatformCountdown(instruction, "signal", 4, () => {
           openLinkTelegramAware(targetUrl);
           handleShareSuccess();
