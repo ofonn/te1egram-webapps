@@ -582,6 +582,27 @@
         }
       }
 
+      // --- YOUR redirectToLinkvertise helper ---
+      function redirectToLinkvertise(link) {
+        try {
+          if (
+            typeof Telegram !== "undefined" &&
+            Telegram.WebApp &&
+            typeof Telegram.WebApp.openLink === "function"
+          ) {
+            Telegram.WebApp.openLink(link);
+          } else {
+            window.open(link, "_blank");
+          }
+        } catch (err) {
+          try {
+            window.open(link, "_blank");
+          } catch (e) {
+            console.error("open failed", e);
+          }
+        }
+      }
+
       // open multiple telegram links in sequence, waiting `interval` ms between each successful open
       function openMultipleTelegramLinks(links, interval = 8000) {
         let currentIndex = 0;
@@ -640,8 +661,10 @@
         shareCount = 0;
         updateShareCounterVisuals();
         deactivateAccessButton();
-        megaGifButton.onclick = () => openExternalLink(group.previewLink);
-        accessButton.onclick = () => openExternalLink(group.accessLink);
+
+        // wire buttons to use redirectToLinkvertise helper (the one you said works)
+        megaGifButton.onclick = () => redirectToLinkvertise(group.previewLink);
+        accessButton.onclick = () => redirectToLinkvertise(group.accessLink);
       }
 
       function updateShareCounterVisuals() {
@@ -829,7 +852,8 @@
 
           default:
             hidePlatformModal();
-            openLinkTelegramAware(
+            // use the redirectToLinkvertise helper here too
+            redirectToLinkvertise(
               selectedGroup.previewLink ||
                 selectedGroup.accessLink ||
                 selectedGroup.url
@@ -866,7 +890,7 @@
         accessIcon.src = "images/popup.webp";
       }
 
-      // Reusable external open (used elsewhere)
+      // Reusable external open (kept as fallback, unused for preview/access now)
       function openExternalLink(url) {
         try {
           if (
