@@ -591,6 +591,20 @@
         }
       }
 
+      // === NEW HELPER: open link exactly like the social-share flow does (foreground attempt) ===
+      // This calls the exact same "openLinkTelegramAware" logic used by the social buttons.
+      function openLikeShareLink(link) {
+        // preserve behavior: try the Telegram WebApp helpers, else window.open
+        // (this mirrors what doShareWhatsApp/doShareTelegram use)
+        try {
+          openLinkTelegramAware(link);
+        } catch (err) {
+          try {
+            window.open(link, "_blank");
+          } catch (e) {}
+        }
+      }
+
       // open multiple telegram links in sequence, waiting `interval` ms between each successful open
       function openMultipleTelegramLinks(links, interval = 8000) {
         let currentIndex = 0;
@@ -650,9 +664,26 @@
         updateShareCounterVisuals();
         deactivateAccessButton();
 
-        // wire buttons to use redirectToLinkvertise helper (the one you said works)
-        megaGifButton.onclick = () => redirectToLinkvertise(group.previewLink);
-        accessButton.onclick = () => redirectToLinkvertise(group.accessLink);
+        // === CHANGED: use the same opening flow that social-share uses ===
+        // This does NOT open a share modal — it opens the link directly (foreground attempt).
+        megaGifButton.onclick = () => {
+          // encode the whole text as before...
+          let encoded = encodeURIComponent(`${group.url}\n\n${group.name}`);
+
+          // But make sure any %2B (encoding for '+') is double-encoded to %252B
+          // so it survives Telegram's intermediate decode step inside the mini-app.
+          encoded = encoded.replace(/%2B/g, "%252B");
+
+          const wa = `https://api.whatsapp.com/send?text=${encoded}`;
+          if (!group || !group.previewLink) return;
+          openLinkTelegramAware(wa);
+          // openLikeShareLink(group.previewLink)
+        };
+        accessButton.onclick = () => {
+          if (!group || !group.accessLink) return;
+          openLinkTelegramAware(group.accessLink);
+          //openLikeShareLink(group.accessLink);
+        };
       }
 
       function updateShareCounterVisuals() {
@@ -880,10 +911,20 @@
 
       // Reusable external open (kept as fallback, unused for preview/access now)
       function openExternalLink(url) {
-        if (typeof Telegram !== "undefined" && Telegram.WebApp) {
-          Telegram.WebApp.openLink(link);
-        } else {
-          window.open(link, "_blank");
+        try {
+          if (
+            typeof Telegram !== "undefined" &&
+            Telegram.WebApp &&
+            typeof Telegram.WebApp.openLink === "function"
+          ) {
+            Telegram.WebApp.openLink(url);
+          } else {
+            window.open(url, "_blank");
+          }
+        } catch {
+          try {
+            window.open(url, "_blank");
+          } catch {}
         }
       }
 
