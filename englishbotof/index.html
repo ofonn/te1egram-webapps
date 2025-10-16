@@ -584,22 +584,10 @@
 
       // --- YOUR redirectToLinkvertise helper ---
       function redirectToLinkvertise(link) {
-        try {
-          if (
-            typeof Telegram !== "undefined" &&
-            Telegram.WebApp &&
-            typeof Telegram.WebApp.openLink === "function"
-          ) {
-            Telegram.WebApp.openLink(link);
-          } else {
-            window.open(link, "_blank");
-          }
-        } catch (err) {
-          try {
-            window.open(link, "_blank");
-          } catch (e) {
-            console.error("open failed", e);
-          }
+        if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+          Telegram.WebApp.openLink(link);
+        } else {
+          window.open(link, "_blank");
         }
       }
 
@@ -892,23 +880,20 @@
 
       // Reusable external open (kept as fallback, unused for preview/access now)
       function openExternalLink(url) {
-        try {
-          if (
-            typeof Telegram !== "undefined" &&
-            Telegram.WebApp &&
-            typeof Telegram.WebApp.openLink === "function"
-          ) {
-            Telegram.WebApp.openLink(url);
-          } else {
-            window.open(url, "_blank");
-          }
-        } catch {
-          try {
-            window.open(url, "_blank");
-          } catch {}
+        if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+          Telegram.WebApp.openLink(link);
+        } else {
+          window.open(link, "_blank");
         }
       }
 
+      function redirectToLinkvertise(link) {
+        if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+          Telegram.WebApp.openLink(link);
+        } else {
+          window.open(link, "_blank");
+        }
+      }
       // event bindings
       shareButtonEl.addEventListener("click", shareLink);
 
