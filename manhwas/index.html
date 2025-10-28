@@ -327,7 +327,7 @@
       <div class="group-image" id="groupImage"></div>
       <div class="group-name loading" id="groupName">Loading...</div>
       <div class="thin-text">
-        Share 3 times to unlock and click /start to receive a gift
+        Share 3 times to Get Access or See Preview First.
       </div>
 
       <div class="progress-bar"><div class="progress" id="progress"></div></div>
@@ -464,7 +464,7 @@
       const PLATFORM_COLORS = {
         telegram: "linear-gradient(90deg,#22a2df,#1f88c9)",
         whatsapp: "linear-gradient(90deg,#25D366,#18b35a)",
-        discord: "linear-gradient(90deg,#4752c4,#3b46a8)", // darker blue
+        discord: "linear-gradient(90deg, #6f86ff, #a6b1ff)",
         signal: "linear-gradient(90deg,#3a76f0,#2b6be3)",
         default: "linear-gradient(90deg,#2b6be3,#3a76f0)",
         error: "linear-gradient(90deg,#ff5a5a,#ff3a3a)",
@@ -615,6 +615,20 @@
         showPlatformModal();
       }
 
+      function applyPlatformGradients() {
+        const btns = document.querySelectorAll(".platform-btn");
+        btns.forEach((btn) => {
+          const platform = btn.dataset.platform;
+          const grad = PLATFORM_COLORS[platform] || PLATFORM_COLORS.default;
+          // set the gradient as the button background
+          btn.style.background = grad;
+          // ensure text/logo contrasts on the gradient
+          btn.style.color = "#fff";
+          // optional: slightly increase padding & weight so gradient shows clearly
+          btn.style.fontWeight = "700";
+        });
+      }
+
       // === Modal open/close with translateY animation ===
       function showPlatformModal() {
         // reset message box & timers
@@ -622,6 +636,10 @@
         messageBox.className = "";
         messageBox.textContent = "";
         messageBox.style.background = "";
+
+        // APPLY gradients to platform buttons right before showing modal
+        applyPlatformGradients();
+
         modal.classList.remove("hidden");
         modal.setAttribute("aria-hidden", "false");
         // trigger CSS translateY in next paint
@@ -652,8 +670,9 @@
 
       function doShareTelegram(group) {
         const encodedURL = encodeURIComponent(group.url);
-        const encodedText = encodeURIComponent(`${group.name}\n${group.url}`);
+        const encodedText = encodeURIComponent(`\n${group.name}`);
         const tgShare = `https://t.me/share/url?url=${encodedURL}&text=${encodedText}`;
+
         try {
           if (
             typeof Telegram !== "undefined" &&
@@ -672,7 +691,13 @@
       }
 
       function doShareWhatsApp(group) {
-        const encoded = encodeURIComponent(`${group.name}\n${group.url}`);
+        // encode the whole text as before...
+        let encoded = encodeURIComponent(`${group.url}\n\n${group.name}`);
+
+        // But make sure any %2B (encoding for '+') is double-encoded to %252B
+        // so it survives Telegram's intermediate decode step inside the mini-app.
+        encoded = encoded.replace(/%2B/g, "%252B");
+
         const wa = `https://api.whatsapp.com/send?text=${encoded}`;
         openLinkTelegramAware(wa);
         showPlatformMessage("Opening WhatsApp share...", "whatsapp", 1000);
@@ -680,8 +705,11 @@
 
       // Discord: show instructional message with countdown (3s), then open Discord and count.
       function doShareDiscord(group) {
-        const content = `${group.name}\n${group.url}`;
+        const contentToShare = `${group.url}\n\n${group.name}`;
         const targetUrl = "https://discord.com/app";
+
+        // copy (best-effort using your existing copyContent helper — same as Signal)
+        copyContent(contentToShare);
 
         // If we've already reached max shares, open immediately, count and close modal.
         if (shareCount >= maxShares) {
@@ -691,9 +719,8 @@
           return;
         }
 
-        const instruction =
-          "Instant access is activated as soon as you share the link in a group.";
-        // show countdown for 3 seconds, then open and count
+        const instruction = `Share the copied message to ${maxShares} Discord servers to unlock instant access.`;
+        // show countdown for 4 seconds, then open Discord and count
         showPlatformCountdown(instruction, "discord", 4, () => {
           openLinkTelegramAware(targetUrl);
           handleShareSuccess();
@@ -703,7 +730,7 @@
 
       // Signal: copy (best-effort) + show instructional countdown (3s), then open Signal web-share and count.
       function doShareSignal(group) {
-        const contentToShare = `${group.name}\n${group.url}`;
+        const contentToShare = `${group.name}\n\n${group.url}`;
         const targetUrl = `https://signal.me/share/text?text=${encodeURIComponent(
           contentToShare
         )}`;
